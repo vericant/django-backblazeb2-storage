@@ -44,10 +44,16 @@ class BackBlazeB2(object):
 
     def get_upload_url(self):
         self._ensure_authorization()
+
         url = self._build_url('/b2api/v1/b2_get_upload_url')
         headers = {'Authorization': self.authorization_token}
         params = {'bucketId': self.bucket_id}
-        return requests.get(url, headers=headers, params=params).json()
+        response = requests.get(url, headers=headers, params=params)
+
+        if response.status_code != 200:
+            response.raise_for_status()
+
+        return response.json()
 
     def _build_url(self, endpoint):
         return self.base_url + endpoint
@@ -56,9 +62,6 @@ class BackBlazeB2(object):
         self._ensure_authorization()
 
         response = self.get_upload_url()
-
-        if 'uploadUrl' not in response:
-            return False
 
         url = response['uploadUrl']
         sha1_of_file_data = hashlib.sha1(content.read()).hexdigest()
