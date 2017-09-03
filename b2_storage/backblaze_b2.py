@@ -13,12 +13,12 @@ class BackBlazeB2(object):
     authorization_token = None
 
     def __init__(self, app_key=None, account_id=None, bucket_name=None,
-                 reupload_attempts=3):
+                 max_retries=3):
         self.bucket_id = None
         self.account_id = account_id
         self.app_key = app_key
         self.bucket_name = bucket_name
-        self.reupload_attempts = reupload_attempts
+        self.max_retries = max_retries
 
     def _ensure_authorization(self):
         if self.authorization_token:
@@ -33,14 +33,16 @@ class BackBlazeB2(object):
                               ).encode('utf-8'))).decode('utf-8')}
         response = requests.get(AUTH_URL, headers=headers)
 
-        if response.status_code == 200:
-            resp = response.json()
-            self.base_url = resp['apiUrl']
-            self.download_url = resp['downloadUrl']
-            self.authorization_token = resp['authorizationToken']
-            return True
-        else:
-            return False
+        if response.status_code != 200:
+            response.raise_for_status()
+
+        data = response.json()
+
+        self.base_url = data['apiUrl']
+        self.download_url = data['downloadUrl']
+        self.authorization_token = data['authorizationToken']
+
+        return data
 
     def get_upload_url(self):
         self._ensure_authorization()
@@ -48,9 +50,14 @@ class BackBlazeB2(object):
         url = self._build_url('/b2api/v1/b2_get_upload_url')
         headers = {'Authorization': self.authorization_token}
         params = {'bucketId': self.bucket_id}
+
         response = requests.get(url, headers=headers, params=params)
 
-        if response.status_code != 200:
+        if response.status_code == 401:
+            self.authorize()
+            headers = {'Authorization': self.authorization_token}
+            response = requests.get(url, headers=headers, params=params)
+        elif response.status_code != 200:
             response.raise_for_status()
 
         return response.json()
@@ -61,34 +68,32 @@ class BackBlazeB2(object):
     def upload_file(self, name, content):
         self._ensure_authorization()
 
-        response = self.get_upload_url()
+        upload_url_response = self.get_upload_url()
 
-        url = response['uploadUrl']
+        url = upload_url_response['uploadUrl']
         sha1_of_file_data = hashlib.sha1(content.read()).hexdigest()
         content.seek(0)
 
         headers = {
-            'Authorization': response['authorizationToken'],
+            'Authorization': upload_url_response['authorizationToken'],
             'X-Bz-File-Name': name,
             'Content-Type': "b2/x-auto",
             'X-Bz-Content-Sha1': sha1_of_file_data,
             'X-Bz-Info-src_last_modified_millis': '',
         }
 
-        download_response = requests.post(
-            url, headers=headers, data=content.read())
-        # Status is 503: Service unavailable. Try again
-        if download_response.status_code == 503:
+        response = requests.post(url, headers=headers, data=content.read())
+
+        if response.status_code != 200:
             attempts = 0
-            while attempts <= self.reupload_attempts \
-                    and download_response.status_code == 503:
-                download_response = requests.post(
+            while attempts <= self.max_retries and response.status_code == 503:
+                response = requests.post(
                     url, headers=headers, data=content.read())
                 attempts += 1
-        if download_response.status_code != 200:
-            download_response.raise_for_status()
+        if response.status_code != 200:
+            response.raise_for_status()
 
-        return download_response.json()
+        return response.json()
 
     def get_file_info(self, name):
         self._ensure_authorization()
@@ -109,14 +114,11 @@ class BackBlazeB2(object):
         self._ensure_authorization()
         headers = {'Authorization': self.authorization_token}
         params = {'accountId': self.account_id}
-        resp = requests.get(self._build_url("/b2api/v1/b2_list_buckets"),
-                            headers=headers, params=params).json()
-        if 'buckets' in resp:
-            buckets = resp['buckets']
-            for bucket in buckets:
-                if bucket['bucketName'] == self.bucket_name:
-                    self.bucket_id = bucket['bucketId']
-                    return True
+        response = requests.get(self._build_url("/b2api/v1/b2_list_buckets"),
+                                headers=headers, params=params)
+        if response.status_code != 200:
+            response.raise_for_status()
 
-        else:
-            return False
+        for bucket in response.json()['buckets']:
+            if bucket['bucketName'] == self.bucket_name:
+                self.bucket_id = bucket['bucketId']
