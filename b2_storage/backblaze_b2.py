@@ -82,14 +82,18 @@ class BackBlazeB2(object):
             'X-Bz-Info-src_last_modified_millis': '',
         }
 
-        response = requests.post(url, headers=headers, data=content.read())
-
-        if response.status_code != 200:
-            attempts = 0
-            while attempts <= self.max_retries and response.status_code == 503:
+        attempts = 0
+        while attempts <= self.max_retries:
+            attempts += 1
+            try:
                 response = requests.post(
                     url, headers=headers, data=content.read())
-                attempts += 1
+            except ConnectionError:
+                continue
+
+            if response.status_code == 200:
+                break
+
         if response.status_code != 200:
             response.raise_for_status()
 
