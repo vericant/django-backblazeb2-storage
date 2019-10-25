@@ -13,7 +13,7 @@ class BackBlazeB2(object):
     authorization_token = None
 
     def __init__(self, app_key=None, account_id=None, bucket_name=None,
-                 content_type=None, max_retries=3):
+                max_retries=3, content_type=None):
         self.bucket_id = None
         self.account_id = account_id
         self.app_key = app_key
