@@ -13,11 +13,12 @@ class BackBlazeB2(object):
     authorization_token = None
 
     def __init__(self, app_key=None, account_id=None, bucket_name=None,
-                 max_retries=3):
+                max_retries=3, content_type=None):
         self.bucket_id = None
         self.account_id = account_id
         self.app_key = app_key
         self.bucket_name = bucket_name
+        self.content_type = content_type
         self.max_retries = max_retries
 
     def _ensure_authorization(self):
@@ -74,10 +75,13 @@ class BackBlazeB2(object):
         sha1_of_file_data = hashlib.sha1(content.read()).hexdigest()
         content.seek(0)
 
+        header_content_type = 'b2/x-auto'
+        if self.content_type:
+            header_content_type = self.content_type
         headers = {
             'Authorization': upload_url_response['authorizationToken'],
             'X-Bz-File-Name': name,
-            'Content-Type': "b2/x-auto",
+            'Content-Type': header_content_type,
             'X-Bz-Content-Sha1': sha1_of_file_data,
             'X-Bz-Info-src_last_modified_millis': '',
         }
