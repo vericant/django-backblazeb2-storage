@@ -11,7 +11,7 @@ setup(
         description="Django BackBlaze B2 Storage",
         author="Royendgel Silberie",
         author_email="rsilberie@techprocur.com",
-        url="https://github.com/royendgel/django-blackblazeb2-storage",
+        url="https://github.com/vericant/django-backblazeb2-storage",
         packages=find_packages(),
         classifiers=[
             "Development Status :: 4 - Beta",
