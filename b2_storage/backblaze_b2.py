@@ -91,7 +91,8 @@ class BackBlazeB2(object):
             attempts += 1
             try:
                 response = requests.post(
-                    url, headers=headers, data=content.read())
+                    url, headers=headers, data=content.read(),
+                    timeout=3600)
             except ConnectionError:
                 continue
 
