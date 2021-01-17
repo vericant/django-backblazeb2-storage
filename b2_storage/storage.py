@@ -30,7 +30,6 @@ class B2Storage(Storage):
         Save and retrieve the filename.
         If the file exists it will make another version of that file.
         """
-
         resp = self.b2.upload_file(name, content)
         return resp['fileName']
 
