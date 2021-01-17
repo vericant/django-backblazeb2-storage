@@ -20,7 +20,8 @@ class B2Storage(Storage):
             'app_key': settings.BACKBLAZEB2_APP_KEY,
             'bucket_name': settings.BACKBLAZEB2_BUCKET_NAME,
             'max_retries': settings.BACKBLAZEB2_MAX_RETRIES,
-            'content_type': None
+            'content_type': None,
+            'minimum_part_size': settings.BACKBLAZEB2_MINIMUM_PART_SIZE,
         }
         kwargs = {k: overrides[k] or v for k, v in defaults.items()}
         self.b2 = BackBlazeB2(**kwargs)

@@ -5,20 +5,20 @@ import hashlib
 import requests
 
 AUTH_URL = 'https://api.backblazeb2.com/b2api/v2/b2_authorize_account'
-MINIMUM_PART_SIZE = 1024 * 1024 * 10  # 10M
 
 
 class BackBlazeB2(object):
     authorization_token = None
 
     def __init__(self, app_key=None, account_id=None, bucket_name=None,
-                 max_retries=3, content_type=None):
+                 max_retries=3, content_type=None, minimum_part_size=None):
         self.bucket_id = None
         self.account_id = account_id
         self.app_key = app_key
         self.bucket_name = bucket_name
         self.content_type = content_type
         self.max_retries = max_retries
+        self.minimum_part_size = minimum_part_size
 
     def _ensure_authorization(self):
         if self.authorization_token:
@@ -127,7 +127,7 @@ class BackBlazeB2(object):
         self._ensure_authorization()
 
         total_file_size = os.fstat(content.fileno()).st_size
-        if total_file_size > MINIMUM_PART_SIZE:
+        if total_file_size > self.minimum_part_size:
             return self.upload_large_file(name, content, total_file_size)
 
         upload_url_response = self.get_upload_url()
@@ -173,13 +173,13 @@ class BackBlazeB2(object):
         upload_part_url_response = self.get_upload_part_url(file_id)
         url = upload_part_url_response['uploadUrl']
 
-        size_of_part = MINIMUM_PART_SIZE
+        size_of_part = self.minimum_part_size
         total_bytes_sent = 0
         part_number = 1
         part_sha1_array = []
 
         while (total_bytes_sent < total_file_size):
-            if ((total_file_size - total_bytes_sent) < MINIMUM_PART_SIZE):
+            if ((total_file_size - total_bytes_sent) < self.minimum_part_size):
                 size_of_part = total_file_size - total_bytes_sent
 
             content.seek(total_bytes_sent)
