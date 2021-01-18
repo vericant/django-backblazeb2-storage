@@ -2,8 +2,10 @@ import os
 import base64
 import hashlib
 
+import logging
 import requests
 
+log = logging.getLogger('django')
 AUTH_URL = 'https://api.backblazeb2.com/b2api/v2/b2_authorize_account'
 
 
@@ -153,7 +155,9 @@ class BackBlazeB2(object):
                 response = requests.post(
                     url, headers=headers, data=content.read(),
                     timeout=3600)
-            except ConnectionError:
+            except requests.exceptions.ConnectionError as e:
+                log.info('Connection error: {}, current attempts: {}'.format(
+                    e, attempts))
                 continue
 
             if response.status_code == 200:
@@ -203,7 +207,9 @@ class BackBlazeB2(object):
                     response = requests.post(
                         url, headers=headers, data=part_data,
                         timeout=3600)
-                except ConnectionError:
+                except requests.exceptions.ConnectionError as e:
+                    log.info('Connection error: {}, ' 'current attempts: {}'
+                             .format(e, attempts))
                     continue
 
                 if response.status_code == 200:

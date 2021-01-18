@@ -13,7 +13,7 @@ from .backblaze_b2 import BackBlazeB2
 class B2Storage(Storage):
 
     def __init__(self, account_id=None, app_key=None, bucket_name=None,
-                 max_retries=3, content_type=None, minimum_part_size=None):
+                 max_retries=None, content_type=None, minimum_part_size=None):
         overrides = locals()
         defaults = {
             'account_id': settings.BACKBLAZEB2_ACCOUNT_ID,
